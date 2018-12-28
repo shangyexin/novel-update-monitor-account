@@ -15,9 +15,10 @@ import json
 import config
 from config import logger
 
+
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write("Welcome to use wechat access token server!")
+        self.write("Welcome to use novel update monitor account!")
 
 
 # 校验微信服务器签名
@@ -49,10 +50,30 @@ class VerifyWechatSignHandler(tornado.web.RequestHandler):
             except Exception as e:
                 logger.error(e)
 
+
 # 接收小说更新推送通知
 class NovelUpdateHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.write("NovelUpdateHandler!")
+    def post(self):
+        try:
+            bookName = self.get_argument('bookName', 'UnKnown')
+            latestChapter = self.get_argument('latestChapter', 'UnKnown')
+            updateTime = self.get_argument('updateTime', 'UnKnown')
+            latestUrl = self.get_argument('latestUrl', 'UnKnown')
+
+            if (
+                    bookName == 'UnKnown' or latestChapter == 'UnKnown' or updateTime == 'UnKnown' or latestUrl == 'UnKnown'):
+                logger.error('Wrong wechat signature.')
+                self.write("Invalid request : wrong novel update post info")
+            else:
+                config.notice['data']['novelName']['value'] = bookName
+                config.notice['data']['sectionName']['value'] = latestChapter
+                config.notice['data']['updateTime']['value'] = updateTime
+                config.notice['url'] = latestUrl
+                # print(config.notice)
+                notifyUser(config.notice)
+                self.write("success")
+        except Exception as e:
+            logger.error(e)
 
 
 def makeApp():
@@ -63,8 +84,51 @@ def makeApp():
     ])
 
 
+# 获取access token
+def getAccessToken():
+    accessToken = None
+    request = tornado.httpclient.HTTPRequest(config.getTokenUlr, method='GET')
+    # 同步客戶端
+    syncHttpClient = tornado.httpclient.HTTPClient()
+    try:
+        response = syncHttpClient.fetch(request)
+    except Exception as e:
+        logger.error(e)
+        logger.error('Get access token failed.')
+    else:
+        logger.info('Get access token response body: %s', response.body)
+        # response body里面json格式的字典
+        resDict = json.loads(response.body.decode('utf8'))
+        accessToken = resDict['access_token']
+        # print(accessToken)
+    syncHttpClient.close()
+
+    return accessToken
+
+
+# 通知用户
+def notifyUser(data):
+    accessToken = getAccessToken()
+    if accessToken is not None:
+        notifyUrl = config.baseNotifyUrl + accessToken
+        jsonData = json.dumps(data)
+        # print(notifyUrl)
+        try:
+            request = tornado.httpclient.HTTPRequest(notifyUrl, method='POST', body=jsonData)
+            syncHttpClient = tornado.httpclient.HTTPClient()
+            response = syncHttpClient.fetch(request)
+        except Exception as e:
+            logger.error(e)
+            logger.error('Notify wechat user failed.')
+        else:
+            logger.info('Notify wechat user success, response is %s.', response.body)
+        syncHttpClient.close()
+    else:
+        pass
+
+
 if __name__ == "__main__":
     app = makeApp()
     app.listen(config.bindPort, address=config.bindIp)
-    logger.info('Start to run nove update monitor account!')
+    logger.info('Start to run novel update monitor account!')
     tornado.ioloop.IOLoop.instance().start()
