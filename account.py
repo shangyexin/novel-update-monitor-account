@@ -60,8 +60,8 @@ class NovelUpdateHandler(tornado.web.RequestHandler):
             updateTime = self.get_argument('updateTime', 'UnKnown')
             latestUrl = self.get_argument('latestUrl', 'UnKnown')
 
-            if (
-                    bookName == 'UnKnown' or latestChapter == 'UnKnown' or updateTime == 'UnKnown' or latestUrl == 'UnKnown'):
+            if (bookName == 'UnKnown' or latestChapter == 'UnKnown'
+                    or updateTime == 'UnKnown' or latestUrl == 'UnKnown'):
                 logger.error('Wrong wechat signature.')
                 self.write("Invalid request : wrong novel update post info")
             else:
@@ -70,7 +70,7 @@ class NovelUpdateHandler(tornado.web.RequestHandler):
                 config.notice['data']['updateTime']['value'] = updateTime
                 config.notice['url'] = latestUrl
                 # print(config.notice)
-                notifyUser(config.notice)
+                putIntoQueue(config.notice)
                 self.write("success")
         except Exception as e:
             logger.error(e)
@@ -105,6 +105,38 @@ def getAccessToken():
 
     return accessToken
 
+# 判断是否在勿扰模式时间段
+def inSlientMode():
+    from datetime import datetime, timedelta, timezone
+    # 拿到UTC时间，并强制设置时区为UTC+0:00:
+    utc_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
+    # astimezone()将转换时区为北京时间:
+    bj_dt = utc_dt.astimezone(timezone(timedelta(hours=8)))
+    hour = bj_dt.hour
+    if hour >= config.slientModeStartTime or hour < config.slientModeEndTime:
+        return True
+    else:
+        return False
+
+# 将消息放入通知队列
+def putIntoQueue(data):
+    # 勿扰模式打开且在勿扰模式时间段
+    if config.slientMode is True and inSlientMode() is True:
+        config.notificationQueue.append(data)
+        logger.info(config.notificationQueue)
+    else:
+        # 否则直接通知用户
+        notifyUser(data)
+
+# 从队列里取出更新消息
+def pickFromQueued():
+    if inSlientMode() is not True and len(config.notificationQueue) > 0:
+        for data in config.notificationQueue[:]:
+            print(config.notificationQueue)
+            notifyUser(data)
+            config.notificationQueue.remove(data)
+            print(config.notificationQueue)
+
 
 # 通知用户
 def notifyUser(data):
@@ -124,11 +156,13 @@ def notifyUser(data):
             logger.info('Notify wechat user success, response is %s.', response.body)
         syncHttpClient.close()
     else:
-        pass
+        config.notificationQueue.append[data]
 
 
 if __name__ == "__main__":
     app = makeApp()
     app.listen(config.bindPort, address=config.bindIp)
     logger.info('Start to run novel update monitor account!')
+    if config.slientMode is True:
+        tornado.ioloop.PeriodicCallback(pickFromQueued, 1*60*1000)
     tornado.ioloop.IOLoop.instance().start()

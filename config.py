@@ -13,8 +13,13 @@ bindIp = '0.0.0.0'
 bindPort = 12126
 
 token = 'VqmB965wOEBrPLNoMkHCfIOpxF0WWFM6'
-getTokenUlr = 'https://gitlab.net.cn/wechat/token?type=access_token&secret=f3b2241f967aa3c7966f537cdd82ce11'
+getTokenUlr = 'https://gitlab.net.cn/wechat/token?type=access_token&secret=c4ca4238a0b923820dcc509a6f75849b'
 baseNotifyUrl = 'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token='
+
+slientMode = True
+slientModeStartTime = 23
+slientModeEndTime = 17
+notificationQueue = []
 
 notice = {
     "touser": "oQHU46Djs5O3yhsTmYGvDz_Hi0vo",
