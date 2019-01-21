@@ -129,14 +129,11 @@ def putIntoQueue(data):
         notifyUser(data)
 
 # 从队列里取出更新消息
-def pickFromQueued():
+def pickFromQueue():
     if inSlientMode() is not True and len(config.notificationQueue) > 0:
         for data in config.notificationQueue[:]:
-            print(config.notificationQueue)
             notifyUser(data)
             config.notificationQueue.remove(data)
-            print(config.notificationQueue)
-
 
 # 通知用户
 def notifyUser(data):
@@ -156,7 +153,7 @@ def notifyUser(data):
             logger.info('Notify wechat user success, response is %s.', response.body)
         syncHttpClient.close()
     else:
-        config.notificationQueue.append[data]
+        config.notificationQueue.append(data)
 
 
 if __name__ == "__main__":
@@ -164,5 +161,5 @@ if __name__ == "__main__":
     app.listen(config.bindPort, address=config.bindIp)
     logger.info('Start to run novel update monitor account!')
     if config.slientMode is True:
-        tornado.ioloop.PeriodicCallback(pickFromQueued, 1*60*1000)
+        tornado.ioloop.PeriodicCallback(pickFromQueue, 5*60*1000).start()
     tornado.ioloop.IOLoop.instance().start()

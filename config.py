@@ -18,7 +18,7 @@ baseNotifyUrl = 'https://api.weixin.qq.com/cgi-bin/message/template/send?access_
 
 slientMode = True
 slientModeStartTime = 23
-slientModeEndTime = 17
+slientModeEndTime = 7
 notificationQueue = []
 
 notice = {
