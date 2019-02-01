@@ -11,6 +11,7 @@ import tornado.httputil
 import tornado.gen
 import hashlib
 import json
+import copy
 
 import config
 from config import logger
@@ -122,7 +123,9 @@ def inSlientMode():
 def putIntoQueue(data):
     # 勿扰模式打开且在勿扰模式时间段
     if config.slientMode is True and inSlientMode() is True:
-        config.notificationQueue.append(data)
+        # list直接append字典会得到重复的值，所以需要复制后再append
+        dataCopy = copy.deepcopy(data)
+        config.notificationQueue.append(dataCopy)
         logger.info(config.notificationQueue)
     else:
         # 否则直接通知用户
